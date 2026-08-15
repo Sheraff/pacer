@@ -110,7 +110,9 @@ jobs:
         uses: TanStack/config/.github/setup@e4b48f16568324f76f467aa4c2aac2f05db632c3
       - name: Enter Pre-Release Mode
         if: needs.select-mode.outputs.prerelease-tag != '' && !hashFiles('.changeset/pre.json')
-        run: pnpm changeset pre enter "${{ needs.select-mode.outputs.prerelease-tag }}"
+        run: pnpm changeset pre enter "$PRERELEASE_TAG"
+        env:
+          PRERELEASE_TAG: ${{ needs.select-mode.outputs.prerelease-tag }}
       - name: Validate Pre-Release State
         if: needs.select-mode.outputs.prerelease-tag != ''
         run: |
