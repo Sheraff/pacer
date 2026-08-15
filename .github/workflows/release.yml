@@ -71,7 +71,7 @@ jobs:
         if: steps.release-channel.outputs.prerelease-tag == ''
         run: |
           if [[ -f ".changeset/pre.json" ]]; then
-            echo "::error::Exit Changesets pre-release mode before merging to main."
+            echo "::error title=Changesets release state mismatch::Changesets uses .changeset/pre.json, not the Git branch, to choose pre-release versions and npm dist-tags. Pacer reserves main for stable releases, so run 'pnpm changeset pre exit' and commit the result before releasing from main."
             exit 1
           fi
       - name: Select Release Mode
@@ -80,9 +80,12 @@ jobs:
       - name: Validate Pre-Release State
         if: steps.changesets.outputs.mode == 'publish' && steps.release-channel.outputs.prerelease-tag != ''
         run: |
-          actual_tag="$(jq -er '.tag' .changeset/pre.json)"
+          if ! actual_tag="$(jq -er '.tag' .changeset/pre.json)"; then
+            echo "::error title=Changesets release state mismatch::Changesets uses .changeset/pre.json, not the Git branch, to choose pre-release versions and npm dist-tags. Pacer's $GITHUB_REF_NAME branch convention requires committed pre-release state with the $EXPECTED_TAG tag before publishing."
+            exit 1
+          fi
           if [[ "$actual_tag" != "$EXPECTED_TAG" ]]; then
-            echo "::error::Expected pre-release tag $EXPECTED_TAG, found $actual_tag"
+            echo "::error title=Changesets release state mismatch::Changesets will publish with the $actual_tag dist-tag from .changeset/pre.json, while Pacer's $GITHUB_REF_NAME branch convention expects $EXPECTED_TAG. Update and commit the pre-release state so Changesets and the branch convention agree."
             exit 1
           fi
         env:
@@ -111,9 +114,12 @@ jobs:
       - name: Validate Pre-Release State
         if: needs.select-mode.outputs.prerelease-tag != ''
         run: |
-          actual_tag="$(jq -er '.tag' .changeset/pre.json)"
+          if ! actual_tag="$(jq -er '.tag' .changeset/pre.json)"; then
+            echo "::error title=Changesets release state mismatch::Changesets uses .changeset/pre.json, not the Git branch, to choose pre-release versions and npm dist-tags. Pacer's $GITHUB_REF_NAME branch convention requires pre-release state with the $EXPECTED_TAG tag before versioning."
+            exit 1
+          fi
           if [[ "$actual_tag" != "$EXPECTED_TAG" ]]; then
-            echo "::error::Expected pre-release tag $EXPECTED_TAG, found $actual_tag"
+            echo "::error title=Changesets release state mismatch::Changesets will version packages with the $actual_tag dist-tag from .changeset/pre.json, while Pacer's $GITHUB_REF_NAME branch convention expects $EXPECTED_TAG. Update and commit the pre-release state so Changesets and the branch convention agree."
             exit 1
           fi
         env:
