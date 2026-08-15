@@ -79,13 +79,12 @@ jobs:
         uses: changesets/action/select-mode@198f833dd7d863100ea6e28967bc9a9fdefadb0a # v2.1.0
       - name: Validate Pre-Release State
         if: steps.changesets.outputs.mode == 'publish' && steps.release-channel.outputs.prerelease-tag != ''
-        run: >-
-          node --input-type=module --eval
-          'import { readFileSync } from "node:fs";
-          const { tag } = JSON.parse(readFileSync(".changeset/pre.json", "utf8"));
-          if (tag !== process.env.EXPECTED_TAG) {
-            throw new Error(`Expected pre-release tag ${process.env.EXPECTED_TAG}, found ${tag}`);
-          }'
+        run: |
+          actual_tag="$(jq -er '.tag' .changeset/pre.json)"
+          if [[ "$actual_tag" != "$EXPECTED_TAG" ]]; then
+            echo "::error::Expected pre-release tag $EXPECTED_TAG, found $actual_tag"
+            exit 1
+          fi
         env:
           EXPECTED_TAG: ${{ steps.release-channel.outputs.prerelease-tag }}
 
@@ -111,13 +110,12 @@ jobs:
         run: pnpm changeset pre enter "${{ needs.select-mode.outputs.prerelease-tag }}"
       - name: Validate Pre-Release State
         if: needs.select-mode.outputs.prerelease-tag != ''
-        run: >-
-          node --input-type=module --eval
-          'import { readFileSync } from "node:fs";
-          const { tag } = JSON.parse(readFileSync(".changeset/pre.json", "utf8"));
-          if (tag !== process.env.EXPECTED_TAG) {
-            throw new Error(`Expected pre-release tag ${process.env.EXPECTED_TAG}, found ${tag}`);
-          }'
+        run: |
+          actual_tag="$(jq -er '.tag' .changeset/pre.json)"
+          if [[ "$actual_tag" != "$EXPECTED_TAG" ]]; then
+            echo "::error::Expected pre-release tag $EXPECTED_TAG, found $actual_tag"
+            exit 1
+          fi
         env:
           EXPECTED_TAG: ${{ needs.select-mode.outputs.prerelease-tag }}
       - name: Create or Update Release Pull Request
